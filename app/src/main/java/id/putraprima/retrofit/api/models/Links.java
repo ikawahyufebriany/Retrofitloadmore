@@ -1,7 +1,7 @@
 package id.putraprima.retrofit.api.models;
 
 public class Links {
-    public String first,last,prev,next;
+    public String first, last, prev, next;
 
     public Links(String first, String last, String prev, String next) {
         this.first = first;
@@ -9,7 +9,6 @@ public class Links {
         this.prev = prev;
         this.next = next;
     }
-
     public Links() {
     }
 

@@ -13,8 +13,8 @@
         android:layout_height="75dp"
         android:layout_marginStart="1dp"
         android:layout_marginEnd="1dp"
-        android:onClick="handleLoginClick"
         android:text="Login"
+        android:onClick="handleLogin"
         app:layout_constraintBottom_toTopOf="@+id/bntToRegister"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent" />
@@ -26,7 +26,9 @@
         android:text="Register"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent" />
+        app:layout_constraintStart_toStartOf="parent"
+        android:onClick="handleRegister"
+        />
 
     <EditText
         android:id="@+id/edtEmail"
@@ -36,7 +38,6 @@
         android:ems="10"
         android:hint="email"
         android:inputType="textEmailAddress"
-        android:text="admin@app.id"
         app:layout_constraintBottom_toTopOf="@+id/edtPassword"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent" />
@@ -49,7 +50,6 @@
         android:ems="10"
         android:hint="password"
         android:inputType="textPassword"
-        android:text="12345678"
         app:layout_constraintBottom_toTopOf="@+id/btnLogin"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent" />

@@ -1,22 +1,25 @@
 package id.putraprima.retrofit.ui;
 
-import androidx.appcompat.app.AppCompatActivity;
-
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.Bundle;
-import android.preference.PreferenceManager;
 import android.view.View;
-import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import androidx.appcompat.app.AlertDialog;
+import androidx.appcompat.app.AppCompatActivity;
+
+import java.util.Timer;
+import java.util.TimerTask;
 
 import id.putraprima.retrofit.R;
 import id.putraprima.retrofit.api.helper.ServiceGenerator;
 import id.putraprima.retrofit.api.models.AppVersion;
+import id.putraprima.retrofit.api.models.Session;
 import id.putraprima.retrofit.api.services.ApiInterface;
 import retrofit2.Call;
 import retrofit2.Callback;
@@ -24,17 +27,19 @@ import retrofit2.Response;
 
 public class SplashActivity extends AppCompatActivity {
     TextView lblAppName, lblAppTittle, lblAppVersion;
-    Context context;
+    public Session dataSession;
+    Timer timer;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_splash);
-        context = getApplicationContext();
         setupLayout();
-        setAppInfo();
+        dataSession = new Session(this);
         if (checkInternetConnection()) {
             checkAppVersion();
         }
+        setAppInfo();
     }
 
     private void setupLayout() {
@@ -42,20 +47,30 @@ public class SplashActivity extends AppCompatActivity {
         lblAppTittle = findViewById(R.id.lblAppTittle);
         lblAppVersion = findViewById(R.id.lblAppVersion);
         //Sembunyikan lblAppName dan lblAppVersion pada saat awal dibuka
-//        lblAppVersion.setVisibility(View.INVISIBLE);
-//        lblAppName.setVisibility(View.INVISIBLE);
+        lblAppVersion.setVisibility(View.INVISIBLE);
+        lblAppName.setVisibility(View.INVISIBLE);
     }
 
     private boolean checkInternetConnection() {
+        boolean status = false;
         //TODO : 1. Implementasikan proses pengecekan koneksi internet, berikan informasi ke user jika tidak terdapat koneksi internet
-        ConnectivityManager cm =
-                (ConnectivityManager)context.getSystemService(Context.CONNECTIVITY_SERVICE);
-
-        NetworkInfo activeNetwork = cm.getActiveNetworkInfo();
-        boolean isConnected = activeNetwork != null &&
-                activeNetwork.isConnectedOrConnecting();
-
-        return isConnected;
+        ConnectivityManager connMgr = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkInfo activeInfo = connMgr.getActiveNetworkInfo();
+        if (activeInfo != null && activeInfo.isConnected()) {
+            status = activeInfo.getType() == ConnectivityManager.TYPE_MOBILE || activeInfo.getType() == ConnectivityManager.TYPE_WIFI;
+            Toast.makeText(this, "Koneksi Berhasil", Toast.LENGTH_SHORT).show();
+        } else {
+            status = false;
+            Toast.makeText(this, "Tidak ada koneksi", Toast.LENGTH_SHORT).show();
+            Timer timer = new Timer();
+            timer.schedule(new TimerTask() {
+                @Override
+                public void run() {
+                    finish();
+                }
+            }, 2000);
+        }
+        return status;
     }
 
 
@@ -64,12 +79,12 @@ public class SplashActivity extends AppCompatActivity {
         //lblAppVersion dan lblAppName dimunculkan kembali dengan data dari shared preferences
         //lblAppVersion.setVisibility(View.INVISIBLE);
         //lblAppName.setVisibility(View.INVISIBLE);
-        SharedPreferences preference = PreferenceManager.getDefaultSharedPreferences(context);
-        lblAppName.setVisibility(View.VISIBLE);
-        lblAppName.setText(preference.getString("appName","default"));
-        lblAppVersion.setVisibility(View.VISIBLE);
-        lblAppVersion.setText(preference.getString("appVersion","default"));
-
+        if(dataSession.isKeepData()) {
+            lblAppName.setVisibility(View.VISIBLE);
+            lblAppVersion.setVisibility(View.VISIBLE);
+            lblAppName.setText(dataSession.getDataApp());
+            lblAppVersion.setText(dataSession.getDataVersion());
+        }
     }
 
     private void checkAppVersion() {
@@ -78,22 +93,37 @@ public class SplashActivity extends AppCompatActivity {
         call.enqueue(new Callback<AppVersion>() {
             @Override
             public void onResponse(Call<AppVersion> call, Response<AppVersion> response) {
-                Toast.makeText(SplashActivity.this, response.body().getApp(), Toast.LENGTH_SHORT).show();
                 //Todo : 2. Implementasikan Proses Simpan Data Yang didapat dari Server ke SharedPreferences
-                SharedPreferences preference = PreferenceManager.getDefaultSharedPreferences(context);
-                SharedPreferences.Editor editor = preference.edit();
-                editor.putString("appName",response.body().getApp());
-                editor.putString("appVersion",response.body().getVersion());
-                editor.apply();
+                dataSession.setDataApp(response.body().getApp());
+                dataSession.setDataVersion(response.body().getVersion());
                 //Todo : 3. Implementasikan Proses Pindah Ke MainActivity Jika Proses getAppVersion() sukses
-                Intent i = new Intent(getApplicationContext(),MainActivity.class);
-                startActivity(i);
-                finish();
+
+                if (response.body() != null) {
+                    timer = new Timer();
+                    timer.schedule(new TimerTask() {
+                        @Override
+                        public void run() {
+                            Intent intent = new Intent(SplashActivity.this, MainActivity.class);
+                            startActivity(intent);
+                            finish();
+                        }
+                    }, 4000);
+                }
             }
 
             @Override
             public void onFailure(Call<AppVersion> call, Throwable t) {
-                Toast.makeText(SplashActivity.this, "Gagal Koneksi Ke Server", Toast.LENGTH_SHORT).show();
+                final AlertDialog.Builder builder = new AlertDialog.Builder(SplashActivity.this);
+                builder.setMessage("Koneksi ke Server Gagal");
+                builder.setCancelable(true);
+                builder.setPositiveButton("Keluar!", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        finish();
+                    }
+                });
+                AlertDialog alertDialog = builder.create();
+                alertDialog.show();
                 //Todo : 4. Implementasikan Cara Notifikasi Ke user jika terjadi kegagalan koneksi ke server silahkan googling cara yang lain selain menggunakan TOAST
             }
         });
